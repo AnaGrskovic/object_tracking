@@ -1,8 +1,7 @@
 import cv2
 import numpy as np
 
-
-N_POINTS = 100   # number of points in a bounding box
+PIXELS_BETWEEN_POINTS = 5
 DATA_DIR = "C:/Users/Ana/Desktop/Ana/FER/6.semestar/ZAVRAD/data/"
 
 
@@ -13,52 +12,101 @@ class MedianFlowTracker(object):
                               maxLevel=3,
                               criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.1))
 
-    def calculate_next_bounding_box(self, f1, f2, bb1):
+    def calculate_next_bounding_box(self, frame_1, frame_2, bounding_box_1):
 
-        f1bb = cv2.rectangle(f1, bb1, (255, 0, 0), 2)   # frame1 with bounding box drawn on it
+        # DRAW A BOUNDING BOX ON FRAME 1
+        frame_1_copy = np.copy(frame_1)
+        frame_1_with_bounding_box = cv2.rectangle(frame_1_copy, bounding_box_1, (255, 0, 0), 2)
 
-        bb1top = bb1[0]
-        bb1left = bb1[1]
-        bb1height = bb1[2]
-        bb1width = bb1[3]
+        # INITIALIZE A GRID OF POINTS
+        bounding_box_1_left = bounding_box_1[0]
+        bounding_box_1_top = bounding_box_1[1]
+        bounding_box_1_width = bounding_box_1[2]
+        bounding_box_1_height = bounding_box_1[3]
 
-        # todo: napraviti da točkice budu uniformno raspoređene, a ne ovako raštrkane
-        points1old = np.empty((N_POINTS, 2))   # matrix with N_POINTS rows and 2 columns
-        points1old[:, 0] = np.random.randint(bb1left, bb1left + bb1width, N_POINTS)   # x coordinates of points
-        points1old[:, 1] = np.random.randint(bb1top, bb1top + bb1height, N_POINTS)   # y coordinates of points
-        points1old = points1old.astype(np.float32)
+        point_x_range = []
+        i = bounding_box_1_left
+        while i < (bounding_box_1_left + bounding_box_1_width):
+            point_x_range.append(i)
+            i += PIXELS_BETWEEN_POINTS
+        point_y_range = []
+        i = bounding_box_1_top
+        while i < (bounding_box_1_top + bounding_box_1_height):
+            point_y_range.append(i)
+            i += PIXELS_BETWEEN_POINTS
 
-        f1points_old = self.draw_points_on_frame(f1bb, points1old)
-        cv2.imshow("Tracking", f1points_old)
+        point_x_coords, point_y_coords = np.meshgrid(point_x_range, point_y_range)
+
+        point_x_coords = point_x_coords.reshape((np.prod(point_x_coords.shape),))
+        point_y_coords = point_y_coords.reshape((np.prod(point_y_coords.shape),))
+
+        number_of_points = len(point_x_range) * len(point_y_range)
+
+        points_old_1 = np.empty((number_of_points, 2))  # matrix with N_POINTS rows and 2 columns
+        points_old_1[:, 0] = point_y_coords
+        points_old_1[:, 1] = point_x_coords
+        points_old_1 = points_old_1.astype(np.float32)
+
+        # DRAW AN ORIGINAL GRID OF POINTS ON FRAME 1
+        frame_1_with_bounding_box_copy = np.copy(frame_1_with_bounding_box)
+        frame_1_with_old_points = self.draw_points_on_frame(frame_1_with_bounding_box_copy, points_old_1)
+        cv2.imshow("Tracking", frame_1_with_old_points)
         cv2.waitKey(0)
 
-        points2, st, err = cv2.calcOpticalFlowPyrLK(f1, f2, points1old, None, **self.lk_params)
+        # CALCULATE FORWARD OPTICAL FLOW
+        points_new_2, st, err = cv2.calcOpticalFlowPyrLK(frame_1, frame_2, points_old_1, None, **self.lk_params)
 
-        f2points = self.draw_points_on_frame(frame2, points2)
-        cv2.imshow("Tracking", f2points)
+        # DRAW A CALCULATED GRID OF POINTS ON FRAME 2
+        frame_2_copy = np.copy(frame_2)
+        frame_2_with_new_points = self.draw_points_on_frame(frame_2_copy, points_new_2)
+        cv2.imshow("Tracking", frame_2_with_new_points)
         cv2.waitKey(0)
 
-        points1new, st, err = cv2.calcOpticalFlowPyrLK(f2, f1, points2, None, **self.lk_params)
+        # CALCULATE BACKWARD OPTICAL FLOW
+        points_new_1, st, err = cv2.calcOpticalFlowPyrLK(frame_2, frame_1, points_new_2, None, **self.lk_params)
 
-        f1points_new = self.draw_points_on_frame(f1, points1new)
-        cv2.imshow("Tracking", f1points_new)
+        # DRAW A CALCULATED GRID OF POINTS ON FRAME 1
+        frame_1_copy = np.copy(frame_1)
+        frame_1_with_new_points = self.draw_points_on_frame(frame_1_copy, points_new_1)
+        cv2.imshow("Tracking", frame_1_with_new_points)
         cv2.waitKey(0)
 
-        # todo: idući korak je filtrirati 50% točkica
+        # FILTER OUT HALF OF POINTS WITH THE SMALLEST FORWARD BACKWARD ERROR
+        fb_distances = np.abs(points_old_1 - points_new_1).max(axis=1)
+        distances_median = np.median(fb_distances)
+
+        best = fb_distances < distances_median  # true if point is in the better half, false otherwise
+        counter = 0
+        best_indices = []
+        for i in best:
+            if i:
+                best_indices.append(counter)
+            counter += 1
+
+        points_best_1 = [points_new_1[i] for i in best_indices]
+        points_best_1 = np.stack(points_best_1, axis=0)
+
+        points_best_2 = [points_new_2[i] for i in best_indices]
+        points_best_2 = np.stack(points_best_2, axis=0)
+
+        # DRAW A BEST GRID OF POINTS ON FRAME 2
+        frame_2_copy = np.copy(frame_2)
+        frame_2_with_best_points = self.draw_points_on_frame(frame_2_copy, points_best_2)
+        cv2.imshow("Tracking", frame_2_with_best_points)
+        cv2.waitKey(0)
 
 
     def draw_points_on_frame(self, frame, points):
         points = points.astype(int)
         red = [0, 0, 255]
         for row in points:
-            for i in range(row[0] - 2, row[0] + 2):
-                for j in range(row[1] - 2, row[1] + 2):
+            for i in range(row[0] - 1, row[0] + 1):
+                for j in range(row[1] - 1, row[1] + 1):
                     frame[i][j] = red
         return frame
 
 
 if __name__ == '__main__':
-
     tracker = MedianFlowTracker()
 
     # # Read video
@@ -88,6 +136,3 @@ if __name__ == '__main__':
     bbox1 = cv2.selectROI(frame1, False)
 
     tracker.calculate_next_bounding_box(frame1, frame2, bbox1)
-
-
-
