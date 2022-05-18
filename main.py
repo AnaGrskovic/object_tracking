@@ -17,6 +17,7 @@ class MedianFlowTracker(object):
         # DRAW A BOUNDING BOX ON FRAME 1
         frame_1_copy = np.copy(frame_1)
         frame_1_with_bounding_box = cv2.rectangle(frame_1_copy, bounding_box_1, (255, 0, 0), 2)
+        cv2.waitKey(0)
 
         # INITIALIZE A GRID OF POINTS
         bounding_box_1_left = bounding_box_1[0]
@@ -88,6 +89,12 @@ class MedianFlowTracker(object):
 
         points_best_2 = [points_new_2[i] for i in best_indices]
         points_best_2 = np.stack(points_best_2, axis=0)
+
+        # DRAW A BEST GRID OF POINTS ON FRAME 1
+        frame_1_copy = np.copy(frame_1)
+        frame_1_with_best_points = self.draw_points_on_frame(frame_1_copy, points_best_1)
+        cv2.imshow("Tracking", frame_1_with_best_points)
+        cv2.waitKey(0)
 
         # DRAW A BEST GRID OF POINTS ON FRAME 2
         frame_2_copy = np.copy(frame_2)
