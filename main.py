@@ -17,7 +17,6 @@ class MedianFlowTracker(object):
         # DRAW A BOUNDING BOX ON FRAME 1
         frame_1_copy = np.copy(frame_1)
         frame_1_with_bounding_box = cv2.rectangle(frame_1_copy, bounding_box_1, (255, 0, 0), 2)
-        cv2.waitKey(0)
 
         # INITIALIZE A GRID OF POINTS
         bounding_box_1_left = bounding_box_1[0]
@@ -102,6 +101,31 @@ class MedianFlowTracker(object):
         cv2.imshow("Tracking", frame_2_with_best_points)
         cv2.waitKey(0)
 
+        # CALCULATE DISPLACEMENT ON X AND Y AXIS
+        delta_x = np.median(points_best_2[:, 0] - points_best_1[:, 0])
+        delta_y = np.median(points_best_2[:, 1] - points_best_1[:, 1])
+
+        # CALCULATE CHANGE IN SCALE
+        # todo
+
+        # MOVE BOUNDING BOX
+        bounding_box_2 = (int(bounding_box_1[0] + delta_x),
+                          int(bounding_box_1[1] + delta_y),
+                          int(bounding_box_1[2] + delta_x),
+                          int(bounding_box_1[3] + delta_y))
+
+        # CUT BOUNDING BOX 2 IF OUTSIDE OF FRAME 2
+        bounding_box_2 = (min(bounding_box_2[0], frame_2.shape[1]),
+                          min(bounding_box_2[1], frame_2.shape[0]),
+                          min(bounding_box_2[2], frame_2.shape[1]),
+                          min(bounding_box_2[3], frame_2.shape[0]))
+
+        # DRAW A BOUNDING BOX ON FRAME 2
+        frame_2_with_best_points_copy = np.copy(frame_2_with_best_points)
+        frame_2_with_bounding_box = cv2.rectangle(frame_2_with_best_points_copy, bounding_box_2, (255, 0, 0), 2)
+        cv2.imshow("Tracking", frame_2_with_bounding_box)
+        cv2.waitKey(0)
+
 
     def draw_points_on_frame(self, frame, points):
         points = points.astype(int)
@@ -109,7 +133,10 @@ class MedianFlowTracker(object):
         for row in points:
             for i in range(row[0] - 1, row[0] + 1):
                 for j in range(row[1] - 1, row[1] + 1):
-                    frame[i][j] = red
+                    try:
+                        frame[i][j] = red
+                    except IndexError:
+                        pass
         return frame
 
 
@@ -136,10 +163,11 @@ if __name__ == '__main__':
     #     print("Cannot read video file")
     #     sys.exit()
 
-    frame1 = cv2.imread(DATA_DIR + "frame1.png")
-    frame2 = cv2.imread(DATA_DIR + "frame2.png")
+    frame1 = cv2.imread(DATA_DIR + "birds3.png")
+    frame2 = cv2.imread(DATA_DIR + "birds4.png")
 
     # Uncomment the line below to select a different bounding box
     bbox1 = cv2.selectROI(frame1, False)
+    cv2.destroyAllWindows()
 
     tracker.calculate_next_bounding_box(frame1, frame2, bbox1)
