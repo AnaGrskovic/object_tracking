@@ -14,10 +14,6 @@ class MedianFlowTracker(object):
 
     def calculate_next_bounding_box(self, frame_1, frame_2, bounding_box_1):
 
-        # DRAW A BOUNDING BOX ON FRAME 1
-        frame_1_copy = np.copy(frame_1)
-        frame_1_with_bounding_box = cv2.rectangle(frame_1_copy, bounding_box_1, (255, 0, 0), 2)
-
         # INITIALIZE A GRID OF POINTS
         bounding_box_1_left = bounding_box_1[0]
         bounding_box_1_top = bounding_box_1[1]
@@ -47,29 +43,11 @@ class MedianFlowTracker(object):
         points_old_1[:, 1] = point_x_coords
         points_old_1 = points_old_1.astype(np.float32)
 
-        # DRAW AN ORIGINAL GRID OF POINTS ON FRAME 1
-        frame_1_with_bounding_box_copy = np.copy(frame_1_with_bounding_box)
-        frame_1_with_old_points = self.draw_points_on_frame(frame_1_with_bounding_box_copy, points_old_1)
-        cv2.imshow("Tracking", frame_1_with_old_points)
-        cv2.waitKey(0)
-
         # CALCULATE FORWARD OPTICAL FLOW
         points_new_2, st, err = cv2.calcOpticalFlowPyrLK(frame_1, frame_2, points_old_1, None, **self.lk_params)
 
-        # DRAW A CALCULATED GRID OF POINTS ON FRAME 2
-        frame_2_copy = np.copy(frame_2)
-        frame_2_with_new_points = self.draw_points_on_frame(frame_2_copy, points_new_2)
-        cv2.imshow("Tracking", frame_2_with_new_points)
-        cv2.waitKey(0)
-
         # CALCULATE BACKWARD OPTICAL FLOW
         points_new_1, st, err = cv2.calcOpticalFlowPyrLK(frame_2, frame_1, points_new_2, None, **self.lk_params)
-
-        # DRAW A CALCULATED GRID OF POINTS ON FRAME 1
-        frame_1_copy = np.copy(frame_1)
-        frame_1_with_new_points = self.draw_points_on_frame(frame_1_copy, points_new_1)
-        cv2.imshow("Tracking", frame_1_with_new_points)
-        cv2.waitKey(0)
 
         # FILTER OUT HALF OF POINTS WITH THE SMALLEST FORWARD BACKWARD ERROR
         fb_distances = np.abs(points_old_1 - points_new_1).max(axis=1)
@@ -88,18 +66,6 @@ class MedianFlowTracker(object):
 
         points_best_2 = [points_new_2[i] for i in best_indices]
         points_best_2 = np.stack(points_best_2, axis=0)
-
-        # DRAW A BEST GRID OF POINTS ON FRAME 1
-        frame_1_copy = np.copy(frame_1)
-        frame_1_with_best_points = self.draw_points_on_frame(frame_1_copy, points_best_1)
-        cv2.imshow("Tracking", frame_1_with_best_points)
-        cv2.waitKey(0)
-
-        # DRAW A BEST GRID OF POINTS ON FRAME 2
-        frame_2_copy = np.copy(frame_2)
-        frame_2_with_best_points = self.draw_points_on_frame(frame_2_copy, points_best_2)
-        cv2.imshow("Tracking", frame_2_with_best_points)
-        cv2.waitKey(0)
 
         # CALCULATE DISPLACEMENT ON X AND Y AXIS
         delta_x = np.median(points_best_2[:, 0] - points_best_1[:, 0])
@@ -120,11 +86,7 @@ class MedianFlowTracker(object):
                           min(bounding_box_2[2], frame_2.shape[1]),
                           min(bounding_box_2[3], frame_2.shape[0]))
 
-        # DRAW A BOUNDING BOX ON FRAME 2
-        frame_2_with_best_points_copy = np.copy(frame_2_with_best_points)
-        frame_2_with_bounding_box = cv2.rectangle(frame_2_with_best_points_copy, bounding_box_2, (255, 0, 0), 2)
-        cv2.imshow("Tracking", frame_2_with_bounding_box)
-        cv2.waitKey(0)
+        return bounding_box_2
 
 
     def draw_points_on_frame(self, frame, points):
@@ -141,33 +103,38 @@ class MedianFlowTracker(object):
 
 
 if __name__ == '__main__':
+
     tracker = MedianFlowTracker()
 
-    # # Read video
-    # video = cv2.VideoCapture(DATA_DIR + "walking.mp4")
-    #
-    # # Exit if video not opened.
-    # if not video.isOpened():
-    #     print("Could not open video")
-    #     sys.exit()
-    #
-    # # Read the first frame
-    # ok, frame1 = video.read()
-    # if not ok:
-    #     print("Cannot read video file")
-    #     sys.exit()
-    #
-    # # Read the second frame
-    # ok, frame2 = video.read()
-    # if not ok:
-    #     print("Cannot read video file")
-    #     sys.exit()
+    video = cv2.VideoCapture(DATA_DIR + "walking.mp4")
+    width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = int(video.get(cv2.CAP_PROP_FPS))
 
-    frame1 = cv2.imread(DATA_DIR + "birds3.png")
-    frame2 = cv2.imread(DATA_DIR + "birds4.png")
-
-    # Uncomment the line below to select a different bounding box
-    bbox1 = cv2.selectROI(frame1, False)
+    # SELECT BOUNDING BOX ON THE FIRST FRAME
+    init_frame = cv2.imread(DATA_DIR + "walking_init.png")
+    dim = (width, height)
+    init_frame = cv2.resize(init_frame, dim, interpolation=cv2.INTER_AREA)
+    bbox2 = cv2.selectROI(init_frame, False)
     cv2.destroyAllWindows()
 
-    tracker.calculate_next_bounding_box(frame1, frame2, bbox1)
+    # PLAY VIDEO
+    output = cv2.VideoWriter("output.avi", cv2.VideoWriter_fourcc(*'MPEG'), fps, (height, width))
+    ret2, frame2 = video.read()
+
+    while True:
+        ret1, frame1, bbox1 = ret2, frame2, bbox2
+        ret2, frame2 = video.read()
+        if ret1 and ret2:
+            bbox2 = tracker.calculate_next_bounding_box(frame1, frame2, bbox1)
+            cv2.rectangle(frame2, bbox2, (255, 0, 0), 2)
+            output.write(frame2)
+            cv2.imshow("", frame2)
+            if cv2.waitKey(1) & 0xFF == ord('s'):
+                break
+        else:
+            break
+
+    cv2.destroyAllWindows()
+    output.release()
+    video.release()
