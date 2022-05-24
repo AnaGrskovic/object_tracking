@@ -163,8 +163,8 @@ if __name__ == '__main__':
     #     print("Cannot read video file")
     #     sys.exit()
 
-    frame1 = cv2.imread(DATA_DIR + "birds3.png")
-    frame2 = cv2.imread(DATA_DIR + "birds4.png")
+    frame1 = cv2.imread(DATA_DIR + "walking3.png")
+    frame2 = cv2.imread(DATA_DIR + "walking4.png")
 
     # Uncomment the line below to select a different bounding box
     bbox1 = cv2.selectROI(frame1, False)
