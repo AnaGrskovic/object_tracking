@@ -77,8 +77,8 @@ class MedianFlowTracker(object):
         # MOVE BOUNDING BOX
         bounding_box_2 = (int(bounding_box_1[0] + delta_x),
                           int(bounding_box_1[1] + delta_y),
-                          int(bounding_box_1[2] + delta_x),
-                          int(bounding_box_1[3] + delta_y))
+                          int(bounding_box_1[2]),
+                          int(bounding_box_1[3]))
 
         # CUT BOUNDING BOX 2 IF OUTSIDE OF FRAME 2
         bounding_box_2 = (min(bounding_box_2[0], frame_2.shape[1]),
