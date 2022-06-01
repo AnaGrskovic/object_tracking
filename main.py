@@ -1,5 +1,7 @@
 import cv2
 import numpy as np
+from PIL import Image, ImageDraw
+
 
 PIXELS_BETWEEN_POINTS = 5
 DATA_DIR = "C:/Users/Ana/Desktop/Ana/FER/6.semestar/ZAVRAD/data/"
@@ -126,6 +128,15 @@ class MedianFlowTracker(object):
         cv2.imshow("Tracking", frame_2_with_bounding_box)
         cv2.waitKey(0)
 
+        # DRAW OPTICAL FLOW ON FRAME 2
+        im = Image.open(DATA_DIR + "birds2.png"
+                        )
+        d = ImageDraw.Draw(im)
+        for (i, j) in zip(points_best_1, points_best_2):
+            print(i, j)
+            d.line([i[1], i[0], j[1], j[0]], fill=(0, 0, 255), width=3)
+        im.save("optical_flow.png")
+
 
     def draw_points_on_frame(self, frame, points):
         points = points.astype(int)
@@ -163,8 +174,8 @@ if __name__ == '__main__':
     #     print("Cannot read video file")
     #     sys.exit()
 
-    frame1 = cv2.imread(DATA_DIR + "walking3.png")
-    frame2 = cv2.imread(DATA_DIR + "walking4.png")
+    frame1 = cv2.imread(DATA_DIR + "birds1.png")
+    frame2 = cv2.imread(DATA_DIR + "birds2.png")
 
     # Uncomment the line below to select a different bounding box
     bbox1 = cv2.selectROI(frame1, False)
