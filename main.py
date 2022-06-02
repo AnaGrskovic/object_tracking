@@ -19,100 +19,33 @@ class MedianFlowTracker(object):
         # DRAW A BOUNDING BOX ON FRAME 1
         frame_1_copy = np.copy(frame_1)
         frame_1_with_bounding_box = cv2.rectangle(frame_1_copy, bounding_box_1, (255, 0, 0), 2)
-
-        # INITIALIZE A GRID OF POINTS
-        bounding_box_1_left = bounding_box_1[0]
-        bounding_box_1_top = bounding_box_1[1]
-        bounding_box_1_width = bounding_box_1[2]
-        bounding_box_1_height = bounding_box_1[3]
-
-        point_x_range = []
-        i = bounding_box_1_left
-        while i < (bounding_box_1_left + bounding_box_1_width):
-            point_x_range.append(i)
-            i += PIXELS_BETWEEN_POINTS
-        point_y_range = []
-        i = bounding_box_1_top
-        while i < (bounding_box_1_top + bounding_box_1_height):
-            point_y_range.append(i)
-            i += PIXELS_BETWEEN_POINTS
-
-        point_x_coords, point_y_coords = np.meshgrid(point_x_range, point_y_range)
-
-        point_x_coords = point_x_coords.reshape((np.prod(point_x_coords.shape),))
-        point_y_coords = point_y_coords.reshape((np.prod(point_y_coords.shape),))
-
-        number_of_points = len(point_x_range) * len(point_y_range)
-
-        points_old_1 = np.empty((number_of_points, 2))  # matrix with N_POINTS rows and 2 columns
-        points_old_1[:, 0] = point_y_coords
-        points_old_1[:, 1] = point_x_coords
-        points_old_1 = points_old_1.astype(np.float32)
-
-        # DRAW AN ORIGINAL GRID OF POINTS ON FRAME 1
-        frame_1_with_bounding_box_copy = np.copy(frame_1_with_bounding_box)
-        frame_1_with_old_points = self.draw_points_on_frame(frame_1_with_bounding_box_copy, points_old_1)
-        cv2.imshow("Tracking", frame_1_with_old_points)
+        cv2.imshow("Tracking", frame_1_with_bounding_box)
         cv2.waitKey(0)
 
         # CALCULATE FORWARD OPTICAL FLOW
-        points_new_2, st, err = cv2.calcOpticalFlowPyrLK(frame_1, frame_2, points_old_1, None, **self.lk_params)
+        frame_1_gray = cv2.cvtColor(frame_1, cv2.COLOR_RGB2GRAY)
+        frame_2_gray = cv2.cvtColor(frame_2, cv2.COLOR_RGB2GRAY)
 
-        # DRAW A CALCULATED GRID OF POINTS ON FRAME 2
-        frame_2_copy = np.copy(frame_2)
-        frame_2_with_new_points = self.draw_points_on_frame(frame_2_copy, points_new_2)
-        cv2.imshow("Tracking", frame_2_with_new_points)
-        cv2.waitKey(0)
+        flow = None
+        flow = cv2.calcOpticalFlowFarneback(prev=frame_1_gray, next=frame_2_gray, flow=flow, pyr_scale=0.8,
+                                            levels=15, winsize=5, iterations=10, poly_n=5, poly_sigma=0, flags=10)
+        # magnitude, radian_angle = cv2.cartToPolar(flow[..., 0], flow[..., 1])
+        # pi = 22 / 7
+        # degree_angle = [rad*(180/pi) for rad in radian_angle]
+        h, w = frame_2.shape[:2]
+        step = 16
+        y, x = np.mgrid[step/2:h:step, step/2:w:step].reshape(2, -1).astype(int)
+        fx, fy = flow[y, x].T
 
-        # CALCULATE BACKWARD OPTICAL FLOW
-        points_new_1, st, err = cv2.calcOpticalFlowPyrLK(frame_2, frame_1, points_new_2, None, **self.lk_params)
+        fx_median = np.median(fx)
+        fy_median = np.median(fy)
 
-        # DRAW A CALCULATED GRID OF POINTS ON FRAME 1
-        frame_1_copy = np.copy(frame_1)
-        frame_1_with_new_points = self.draw_points_on_frame(frame_1_copy, points_new_1)
-        cv2.imshow("Tracking", frame_1_with_new_points)
-        cv2.waitKey(0)
-
-        # FILTER OUT HALF OF POINTS WITH THE SMALLEST FORWARD BACKWARD ERROR
-        fb_distances = np.abs(points_old_1 - points_new_1).max(axis=1)
-        distances_median = np.median(fb_distances)
-
-        best = fb_distances < distances_median  # true if point is in the better half, false otherwise
-        counter = 0
-        best_indices = []
-        for i in best:
-            if i:
-                best_indices.append(counter)
-            counter += 1
-
-        points_best_1 = [points_new_1[i] for i in best_indices]
-        points_best_1 = np.stack(points_best_1, axis=0)
-
-        points_best_2 = [points_new_2[i] for i in best_indices]
-        points_best_2 = np.stack(points_best_2, axis=0)
-
-        # DRAW A BEST GRID OF POINTS ON FRAME 1
-        frame_1_copy = np.copy(frame_1)
-        frame_1_with_best_points = self.draw_points_on_frame(frame_1_copy, points_best_1)
-        cv2.imshow("Tracking", frame_1_with_best_points)
-        cv2.waitKey(0)
-
-        # DRAW A BEST GRID OF POINTS ON FRAME 2
-        frame_2_copy = np.copy(frame_2)
-        frame_2_with_best_points = self.draw_points_on_frame(frame_2_copy, points_best_2)
-        cv2.imshow("Tracking", frame_2_with_best_points)
-        cv2.waitKey(0)
-
-        # CALCULATE DISPLACEMENT ON X AND Y AXIS
-        delta_x = np.median(points_best_2[:, 0] - points_best_1[:, 0])
-        delta_y = np.median(points_best_2[:, 1] - points_best_1[:, 1])
-
-        # CALCULATE CHANGE IN SCALE
-        # todo
+        print(fx_median)
+        print(fy_median)
 
         # MOVE BOUNDING BOX
-        bounding_box_2 = (int(bounding_box_1[0] + delta_x),
-                          int(bounding_box_1[1] + delta_y),
+        bounding_box_2 = (int(bounding_box_1[0] + fx_median),
+                          int(bounding_box_1[1] + fy_median),
                           int(bounding_box_1[2]),
                           int(bounding_box_1[3]))
 
@@ -123,61 +56,18 @@ class MedianFlowTracker(object):
                           min(bounding_box_2[3], frame_2.shape[0]))
 
         # DRAW A BOUNDING BOX ON FRAME 2
-        frame_2_with_best_points_copy = np.copy(frame_2_with_best_points)
-        frame_2_with_bounding_box = cv2.rectangle(frame_2_with_best_points_copy, bounding_box_2, (255, 0, 0), 2)
+        frame_2_copy = np.copy(frame_2)
+        frame_2_with_bounding_box = cv2.rectangle(frame_2_copy, bounding_box_2, (255, 0, 0), 2)
         cv2.imshow("Tracking", frame_2_with_bounding_box)
         cv2.waitKey(0)
-
-        # DRAW OPTICAL FLOW ON FRAME 2
-        im = Image.open(DATA_DIR + "birds2.png"
-                        )
-        d = ImageDraw.Draw(im)
-        for (i, j) in zip(points_best_1, points_best_2):
-            print(i, j)
-            d.line([i[1], i[0], j[1], j[0]], fill=(0, 0, 255), width=3)
-        im.save("optical_flow.png")
-
-
-    def draw_points_on_frame(self, frame, points):
-        points = points.astype(int)
-        red = [0, 0, 255]
-        for row in points:
-            for i in range(row[0] - 1, row[0] + 1):
-                for j in range(row[1] - 1, row[1] + 1):
-                    try:
-                        frame[i][j] = red
-                    except IndexError:
-                        pass
-        return frame
 
 
 if __name__ == '__main__':
     tracker = MedianFlowTracker()
 
-    # # Read video
-    # video = cv2.VideoCapture(DATA_DIR + "walking.mp4")
-    #
-    # # Exit if video not opened.
-    # if not video.isOpened():
-    #     print("Could not open video")
-    #     sys.exit()
-    #
-    # # Read the first frame
-    # ok, frame1 = video.read()
-    # if not ok:
-    #     print("Cannot read video file")
-    #     sys.exit()
-    #
-    # # Read the second frame
-    # ok, frame2 = video.read()
-    # if not ok:
-    #     print("Cannot read video file")
-    #     sys.exit()
+    frame1 = cv2.imread(DATA_DIR + "walking1.png")
+    frame2 = cv2.imread(DATA_DIR + "walking2.png")
 
-    frame1 = cv2.imread(DATA_DIR + "birds1.png")
-    frame2 = cv2.imread(DATA_DIR + "birds2.png")
-
-    # Uncomment the line below to select a different bounding box
     bbox1 = cv2.selectROI(frame1, False)
     cv2.destroyAllWindows()
 
