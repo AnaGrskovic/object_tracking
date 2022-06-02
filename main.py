@@ -42,6 +42,7 @@ class MedianFlowTracker(object):
 
         # FILTER OUT THE SMALLEST FORWARD BACKWARD ERROR
         flow_diff = np.add(flow_forward, flow_backward)
+        flow_diff = np.abs(flow_diff)
         flow_diff_array = np.array(flow_diff).flatten()
         flow_diff_x = flow_diff_array[::2]
         flow_diff_y = flow_diff_array[1::2]
@@ -75,8 +76,16 @@ class MedianFlowTracker(object):
         # CALCULATE MOVEMENT
         x_movement = [elem[0] for elem in flow_forward_best]
         y_movement = [elem[1] for elem in flow_forward_best]
-        x_movement_median = np.median(x_movement)
-        y_movement_median = np.median(y_movement)
+        x_movement_real_median = np.median(x_movement)
+        y_movement_real_median = np.median(y_movement)
+        print(x_movement_real_median)
+        print(y_movement_real_median)
+        # here i have decided to take a bigger movement than the median
+        sorted_x_movement = sorted(x_movement, key=abs)
+        sorted_y_movement = sorted(y_movement, key=abs)
+        chosen_index = round(0.9 * len(sorted_x_movement))
+        x_movement_median = sorted_x_movement[chosen_index]
+        y_movement_median = sorted_y_movement[chosen_index]
         print(x_movement_median)
         print(y_movement_median)
 
