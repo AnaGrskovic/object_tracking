@@ -9,11 +9,6 @@ DATA_DIR = "C:/Users/Ana/Desktop/Ana/FER/6.semestar/ZAVRAD/data/"
 
 class MedianFlowTracker(object):
 
-    def __init__(self):
-        self.lk_params = dict(winSize=(11, 11),
-                              maxLevel=3,
-                              criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.1))
-
     def calculate_next_bounding_box(self, frame_1, frame_2, bounding_box_1):
 
         bounding_box_1_left = bounding_box_1[0]
