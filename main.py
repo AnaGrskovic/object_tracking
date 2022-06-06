@@ -78,6 +78,14 @@ class MedianFlowTracker(object):
         x_movement_median = np.quantile(x_movement, 0.9)
         y_movement_median = np.quantile(y_movement, 0.9)
 
+        # CALCULATE BOUNDING BOX RESIZING
+        counter = 0
+        for (row_forward, row_backward) in zip(flow_forward, flow_backward):
+            for (column_forward, column_backward) in zip(row_forward, row_backward):
+                if counter in overall_best_indices:
+                    #vzf
+                counter = counter + 1
+
         # MOVE BOUNDING BOX
         bounding_box_2 = (int(bounding_box_1[0] + x_movement_median),
                           int(bounding_box_1[1] + y_movement_median),
