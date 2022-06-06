@@ -35,6 +35,22 @@ class MedianFlowTracker(object):
                                                      levels=15, winsize=5, iterations=10, poly_n=5, poly_sigma=0,
                                                      flags=10)
 
+        # REDUCE DATA COMPLEXITY
+        partially_reduced_flow_forward = flow_forward[::2]
+        reduced_flow_forward = []
+        for row in partially_reduced_flow_forward:
+            row = row[::2]
+            reduced_flow_forward.append(row)
+        reduced_flow_forward = np.array(reduced_flow_forward)
+        flow_forward = reduced_flow_forward
+        partially_reduced_flow_backward = flow_backward[::2]
+        reduced_flow_backward = []
+        for row in partially_reduced_flow_backward:
+            row = row[::2]
+            reduced_flow_backward.append(row)
+        reduced_flow_backward = np.array(reduced_flow_backward)
+        flow_backward = reduced_flow_backward
+
         # FILTER OUT THE SMALLEST FORWARD BACKWARD ERROR
         flow_diff = np.add(flow_forward, flow_backward)
         flow_diff = np.abs(flow_diff)
@@ -129,11 +145,7 @@ if __name__ == '__main__':
     bounding_box_minimum_height = bbox2[3] * 0.25
     cv2.destroyAllWindows()
 
-    # PLAY VIDEO
-    output = cv2.VideoWriter("output.avi", cv2.VideoWriter_fourcc(*'MPEG'), fps, (height, width))
-
     ret2, frame2 = video.read()
-
     try:
         while True:
             ret1, frame1, bbox1 = ret2, frame2, bbox2
@@ -143,7 +155,6 @@ if __name__ == '__main__':
                 if bbox2[2] < bounding_box_minimum_width or bbox2[3] < bounding_box_minimum_height:
                     raise RuntimeError
                 cv2.rectangle(frame2, bbox2, (255, 0, 0), 2)
-                output.write(frame2)
                 cv2.imshow("", frame2)
                 if cv2.waitKey(1) & 0xFF == ord('s'):
                     break
@@ -153,5 +164,4 @@ if __name__ == '__main__':
         print("Tracking is over.")
 
     cv2.destroyAllWindows()
-    output.release()
     video.release()
