@@ -2,7 +2,8 @@ import cv2
 import numpy as np
 
 PIXELS_BETWEEN_POINTS = 5
-DATA_DIR = "../data/"
+DATA_DIR = "data/"
+FILE_NAME = "cars.mp4"
 
 
 class MedianFlowTracker(object):
@@ -116,15 +117,13 @@ if __name__ == '__main__':
 
     tracker = MedianFlowTracker()
 
-    video = cv2.VideoCapture(DATA_DIR + "walking.mp4")
+    video = cv2.VideoCapture(DATA_DIR + FILE_NAME)
     width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps = int(video.get(cv2.CAP_PROP_FPS))
 
     # SELECT BOUNDING BOX ON THE FIRST FRAME
-    init_frame = cv2.imread(DATA_DIR + "walking_init.png")
-    dim = (width, height)
-    init_frame = cv2.resize(init_frame, dim, interpolation=cv2.INTER_AREA)
+    init_ret, init_frame = video.read()
     bbox2 = cv2.selectROI(init_frame, False)
     bounding_box_minimum_width = bbox2[2] * 0.25
     bounding_box_minimum_height = bbox2[3] * 0.25
