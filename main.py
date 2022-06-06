@@ -79,18 +79,23 @@ class MedianFlowTracker(object):
         y_movement_median = np.quantile(y_movement, 0.9)
 
         # CALCULATE BOUNDING BOX RESIZING
-        counter = 0
-        for (row_forward, row_backward) in zip(flow_forward, flow_backward):
-            for (column_forward, column_backward) in zip(row_forward, row_backward):
-                if counter in overall_best_indices:
-                    #vzf
-                counter = counter + 1
+        x_distances_after = []
+        y_distances_after = []
+        for i in range(len(flow_forward) - 1):
+            for j in range(len(flow_forward[i]) - 1):
+                x_distance = 1 - flow_forward[i][j] + flow_forward[i][j + 1]
+                x_distances_after.append(x_distance)
+                y_distance = 1 - flow_forward[i][j] + flow_forward[i + 1][j]
+                y_distances_after.append(y_distance)
+        x_resize = np.median(x_distances_after)
+        y_resize = np.median(y_distances_after)
 
         # MOVE BOUNDING BOX
-        bounding_box_2 = (int(bounding_box_1[0] + x_movement_median),
-                          int(bounding_box_1[1] + y_movement_median),
-                          int(bounding_box_1[2]),
-                          int(bounding_box_1[3]))
+        bounding_box_2_left = int(bounding_box_1[0] + x_movement_median)
+        bounding_box_2_top = int(bounding_box_1[1] + y_movement_median)
+        bounding_box_2_width = int(bounding_box_1[2])   # * x_resize)
+        bounding_box_2_height = int(bounding_box_1[3])   # * y_resize)
+        bounding_box_2 = (bounding_box_2_left, bounding_box_2_top, bounding_box_2_width, bounding_box_2_height)
 
         # CUT BOUNDING BOX 2 IF OUTSIDE OF FRAME 2
         bounding_box_2 = (min(bounding_box_2[0], frame_2.shape[1]),
@@ -101,7 +106,7 @@ class MedianFlowTracker(object):
         return bounding_box_2
 
 
-if __name__ == '__main__':
+if __name__ == '_main_':
 
     tracker = MedianFlowTracker()
 
