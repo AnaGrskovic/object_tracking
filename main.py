@@ -75,8 +75,12 @@ class MedianFlowTracker(object):
         x_movement = x_movement_forward + x_movement_backward
         y_movement = y_movement_forward + y_movement_backward
 
-        x_movement_median = np.quantile(x_movement, 0.9)
-        y_movement_median = np.quantile(y_movement, 0.9)
+        x_movement_median_absolute = np.quantile(np.abs(x_movement), 0.85, method='higher')
+        y_movement_median_absolute = np.quantile(np.abs(y_movement), 0.85, method='higher')
+        x_movement_median_index = np.where(np.abs(x_movement) == x_movement_median_absolute)[0][0]
+        y_movement_median_index = np.where(np.abs(y_movement) == y_movement_median_absolute)[0][0]
+        x_movement_median = x_movement[x_movement_median_index]
+        y_movement_median = y_movement[y_movement_median_index]
 
         # CALCULATE BOUNDING BOX RESIZING
         x_distances_after = []
@@ -93,8 +97,8 @@ class MedianFlowTracker(object):
         # MOVE BOUNDING BOX
         bounding_box_2_left = int(bounding_box_1[0] + x_movement_median)
         bounding_box_2_top = int(bounding_box_1[1] + y_movement_median)
-        bounding_box_2_width = int(bounding_box_1[2])   # * x_resize)
-        bounding_box_2_height = int(bounding_box_1[3])   # * y_resize)
+        bounding_box_2_width = int(bounding_box_1[2] * x_resize)
+        bounding_box_2_height = int(bounding_box_1[3] * y_resize)
         bounding_box_2 = (bounding_box_2_left, bounding_box_2_top, bounding_box_2_width, bounding_box_2_height)
 
         # CUT BOUNDING BOX 2 IF OUTSIDE OF FRAME 2
@@ -106,7 +110,7 @@ class MedianFlowTracker(object):
         return bounding_box_2
 
 
-if __name__ == '_main_':
+if __name__ == '__main__':
 
     tracker = MedianFlowTracker()
 
@@ -124,23 +128,27 @@ if __name__ == '_main_':
 
     # PLAY VIDEO
     output = cv2.VideoWriter("output.avi", cv2.VideoWriter_fourcc(*'MPEG'), fps, (height, width))
+    
+
+
+
     ret2, frame2 = video.read()
 
-    try:
-        while True:
-            ret1, frame1, bbox1 = ret2, frame2, bbox2
-            ret2, frame2 = video.read()
-            if ret1 and ret2:
-                bbox2 = tracker.calculate_next_bounding_box(frame1, frame2, bbox1)
-                cv2.rectangle(frame2, bbox2, (255, 0, 0), 2)
-                output.write(frame2)
-                cv2.imshow("", frame2)
-                if cv2.waitKey(1) & 0xFF == ord('s'):
-                    break
-            else:
+    #try:
+    while True:
+        ret1, frame1, bbox1 = ret2, frame2, bbox2
+        ret2, frame2 = video.read()
+        if ret1 and ret2:
+            bbox2 = tracker.calculate_next_bounding_box(frame1, frame2, bbox1)
+            cv2.rectangle(frame2, bbox2, (255, 0, 0), 2)
+            output.write(frame2)
+            cv2.imshow("", frame2)
+            if cv2.waitKey(1) & 0xFF == ord('s'):
                 break
-    except:
-        print("Tracking is over.")
+        else:
+            break
+    # except:
+    #     print("Tracking is over.")
 
     cv2.destroyAllWindows()
     output.release()
