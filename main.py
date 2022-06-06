@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 PIXELS_BETWEEN_POINTS = 5
-DATA_DIR = "C:/Users/Ana/Desktop/Ana/FER/6.semestar/ZAVRAD/data/"
+DATA_DIR = "../data/"
 
 
 class MedianFlowTracker(object):
@@ -74,18 +74,9 @@ class MedianFlowTracker(object):
         y_movement_backward = [-elem[1] for elem in flow_backward_best]
         x_movement = x_movement_forward + x_movement_backward
         y_movement = y_movement_forward + y_movement_backward
-        x_movement_real_median = np.median(x_movement)
-        y_movement_real_median = np.median(y_movement)
-        print(x_movement_real_median)
-        print(y_movement_real_median)
-        # here i have decided to take a bigger movement than the median
-        sorted_x_movement = sorted(x_movement, key=abs)
-        sorted_y_movement = sorted(y_movement, key=abs)
-        chosen_index = round(0.9 * len(sorted_x_movement))
-        x_movement_median = sorted_x_movement[chosen_index]
-        y_movement_median = sorted_y_movement[chosen_index]
-        print(x_movement_median)
-        print(y_movement_median)
+
+        x_movement_median = np.quantile(x_movement, 0.9)
+        y_movement_median = np.quantile(y_movement, 0.9)
 
         # MOVE BOUNDING BOX
         bounding_box_2 = (int(bounding_box_1[0] + x_movement_median),
