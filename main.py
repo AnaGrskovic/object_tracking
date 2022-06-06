@@ -3,7 +3,9 @@ import numpy as np
 
 PIXELS_BETWEEN_POINTS = 5
 DATA_DIR = "data/"
-FILE_NAME = "cars.mp4"
+FILE_NAME = "driving.mp4"
+## CHOOSE ONE OF THE FOLLOWING: walking.mp4, cars.mp4, skating.mp4, optimist.mp4, red.mp4, driving.mp4
+
 
 
 class MedianFlowTracker(object):
@@ -114,10 +116,10 @@ class MedianFlowTracker(object):
         # MOVE BOUNDING BOX
         bounding_box_width_change = bounding_box_1[2] * (x_resize - 1)
         bounding_box_height_change = bounding_box_1[3] * (y_resize - 1)
-        bounding_box_2_left = int(bounding_box_1[0] + x_movement_median - bounding_box_width_change/2)
-        bounding_box_2_top = int(bounding_box_1[1] + y_movement_median - bounding_box_height_change/2)
-        bounding_box_2_width = int(bounding_box_1[2] * x_resize)
-        bounding_box_2_height = int(bounding_box_1[3] * y_resize)
+        bounding_box_2_left = int(bounding_box_1[0] + x_movement_median - bounding_box_width_change/2 + 0.5)
+        bounding_box_2_top = int(bounding_box_1[1] + y_movement_median - bounding_box_height_change/2 + 0.5)
+        bounding_box_2_width = int(bounding_box_1[2] * x_resize + 0.2)
+        bounding_box_2_height = int(bounding_box_1[3] * y_resize + 0.2)
         bounding_box_2 = (bounding_box_2_left, bounding_box_2_top, bounding_box_2_width, bounding_box_2_height)
 
         # CUT BOUNDING BOX 2 IF OUTSIDE OF FRAME 2
