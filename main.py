@@ -95,8 +95,10 @@ class MedianFlowTracker(object):
         y_resize = np.median(y_distances_after)
 
         # MOVE BOUNDING BOX
-        bounding_box_2_left = int(bounding_box_1[0] + x_movement_median)
-        bounding_box_2_top = int(bounding_box_1[1] + y_movement_median)
+        bounding_box_width_change = bounding_box_1[2] * (x_resize - 1)
+        bounding_box_height_change = bounding_box_1[3] * (y_resize - 1)
+        bounding_box_2_left = int(bounding_box_1[0] + x_movement_median - bounding_box_width_change/2)
+        bounding_box_2_top = int(bounding_box_1[1] + y_movement_median - bounding_box_height_change/2)
         bounding_box_2_width = int(bounding_box_1[2] * x_resize)
         bounding_box_2_height = int(bounding_box_1[3] * y_resize)
         bounding_box_2 = (bounding_box_2_left, bounding_box_2_top, bounding_box_2_width, bounding_box_2_height)
