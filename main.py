@@ -124,31 +124,32 @@ if __name__ == '__main__':
     dim = (width, height)
     init_frame = cv2.resize(init_frame, dim, interpolation=cv2.INTER_AREA)
     bbox2 = cv2.selectROI(init_frame, False)
+    bounding_box_minimum_width = bbox2[2] * 0.25
+    bounding_box_minimum_height = bbox2[3] * 0.25
     cv2.destroyAllWindows()
 
     # PLAY VIDEO
     output = cv2.VideoWriter("output.avi", cv2.VideoWriter_fourcc(*'MPEG'), fps, (height, width))
-    
-
-
 
     ret2, frame2 = video.read()
 
-    #try:
-    while True:
-        ret1, frame1, bbox1 = ret2, frame2, bbox2
-        ret2, frame2 = video.read()
-        if ret1 and ret2:
-            bbox2 = tracker.calculate_next_bounding_box(frame1, frame2, bbox1)
-            cv2.rectangle(frame2, bbox2, (255, 0, 0), 2)
-            output.write(frame2)
-            cv2.imshow("", frame2)
-            if cv2.waitKey(1) & 0xFF == ord('s'):
+    try:
+        while True:
+            ret1, frame1, bbox1 = ret2, frame2, bbox2
+            ret2, frame2 = video.read()
+            if ret1 and ret2:
+                bbox2 = tracker.calculate_next_bounding_box(frame1, frame2, bbox1)
+                if bbox2[2] < bounding_box_minimum_width or bbox2[3] < bounding_box_minimum_height:
+                    raise RuntimeError
+                cv2.rectangle(frame2, bbox2, (255, 0, 0), 2)
+                output.write(frame2)
+                cv2.imshow("", frame2)
+                if cv2.waitKey(1) & 0xFF == ord('s'):
+                    break
+            else:
                 break
-        else:
-            break
-    # except:
-    #     print("Tracking is over.")
+    except:
+        print("Tracking is over.")
 
     cv2.destroyAllWindows()
     output.release()
