@@ -53,53 +53,20 @@ class MedianFlowTracker(object):
         reduced_flow_backward = np.array(reduced_flow_backward)
         flow_backward = reduced_flow_backward
 
-        # FILTER OUT THE SMALLEST FORWARD BACKWARD ERROR
-        flow_diff = np.add(flow_forward, flow_backward)
-        flow_diff = np.abs(flow_diff)
-        flow_diff_array = np.array(flow_diff).flatten()
-        flow_diff_x = flow_diff_array[::2]
-        flow_diff_y = flow_diff_array[1::2]
-        flow_diff_x_median = np.median(flow_diff_x)
-        flow_diff_y_median = np.median(flow_diff_y)
-
-        best_x = flow_diff_x < flow_diff_x_median
-        best_y = flow_diff_y < flow_diff_y_median
-
-        counter_x = 0
-        best_indices_x = []
-        for i in best_x:
-            if i:
-                best_indices_x.append(counter_x)
-            counter_x += 1
-        counter_y = 0
-        best_indices_y = []
-        for i in best_y:
-            if i:
-                best_indices_y.append(counter_y)
-            counter_y += 1
-
-        overall_good_indices = best_indices_x + best_indices_y
-        overall_best_indices = [value for value in best_indices_x if value in best_indices_y]
-
-        flow_forward_array = np.array(flow_forward).flatten()
-        flow_forward_best = [flow_forward_array[i * 2:i * 2 + 2] for i in overall_best_indices]
-        flow_backward_array = np.array(flow_backward).flatten()
-        flow_backward_best = [flow_backward_array[i * 2:i * 2 + 2] for i in overall_best_indices]
-
         # CALCULATE MOVEMENT
-        x_movement_forward = [elem[0] for elem in flow_forward_best]
-        y_movement_forward = [elem[1] for elem in flow_forward_best]
-        x_movement_backward = [-elem[0] for elem in flow_backward_best]
-        y_movement_backward = [-elem[1] for elem in flow_backward_best]
+        x_movement_forward = [elem[0] for elem in flow_forward]
+        y_movement_forward = [elem[1] for elem in flow_forward]
+        x_movement_backward = [-elem[0] for elem in flow_backward]
+        y_movement_backward = [-elem[1] for elem in flow_backward]
         x_movement = x_movement_forward + x_movement_backward
         y_movement = y_movement_forward + y_movement_backward
 
-        x_movement_median_absolute = np.quantile(np.abs(x_movement), 0.85, method='higher')
-        y_movement_median_absolute = np.quantile(np.abs(y_movement), 0.85, method='higher')
+        x_movement_median_absolute = np.quantile(np.abs(x_movement), 0.1, method='higher')
+        y_movement_median_absolute = np.quantile(np.abs(y_movement), 0.1, method='higher')
         x_movement_median_index = np.where(np.abs(x_movement) == x_movement_median_absolute)[0][0]
         y_movement_median_index = np.where(np.abs(y_movement) == y_movement_median_absolute)[0][0]
-        x_movement_median = x_movement[x_movement_median_index]
-        y_movement_median = y_movement[y_movement_median_index]
+        x_movement_median = x_movement[x_movement_median_index][0]
+        y_movement_median = y_movement[y_movement_median_index][1]
 
         # CALCULATE BOUNDING BOX RESIZING
         x_distances_after = []
@@ -148,22 +115,19 @@ if __name__ == '__main__':
     cv2.destroyAllWindows()
 
     ret2, frame2 = video.read()
-    try:
-        while True:
-            ret1, frame1, bbox1 = ret2, frame2, bbox2
-            ret2, frame2 = video.read()
-            if ret1 and ret2:
-                bbox2 = tracker.calculate_next_bounding_box(frame1, frame2, bbox1)
-                if bbox2[2] < bounding_box_minimum_width or bbox2[3] < bounding_box_minimum_height:
-                    raise RuntimeError
-                cv2.rectangle(frame2, bbox2, (255, 0, 0), 2)
-                cv2.imshow("", frame2)
-                if cv2.waitKey(1) & 0xFF == ord('s'):
-                    break
-            else:
+    while True:
+        ret1, frame1, bbox1 = ret2, frame2, bbox2
+        ret2, frame2 = video.read()
+        if ret1 and ret2:
+            bbox2 = tracker.calculate_next_bounding_box(frame1, frame2, bbox1)
+            if bbox2[2] < bounding_box_minimum_width or bbox2[3] < bounding_box_minimum_height:
+                raise RuntimeError
+            cv2.rectangle(frame2, bbox2, (255, 0, 0), 2)
+            cv2.imshow("", frame2)
+            if cv2.waitKey(1) & 0xFF == ord('s'):
                 break
-    except:
-        print("Tracking is over.")
+        else:
+            break
 
     cv2.destroyAllWindows()
     video.release()
