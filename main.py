@@ -49,27 +49,9 @@ class MedianFlowTracker(object):
         # CALCULATE BACKWARD OPTICAL FLOW
         points_new_1, st, err = cv2.calcOpticalFlowPyrLK(frame_2, frame_1, points_new_2, None, **self.lk_params)
 
-        # FILTER OUT HALF OF POINTS WITH THE SMALLEST FORWARD BACKWARD ERROR
-        fb_distances = np.abs(points_old_1 - points_new_1).max(axis=1)
-        distances_median = np.median(fb_distances)
-
-        best = fb_distances < distances_median  # true if point is in the better half, false otherwise
-        counter = 0
-        best_indices = []
-        for i in best:
-            if i:
-                best_indices.append(counter)
-            counter += 1
-
-        points_best_1 = [points_new_1[i] for i in best_indices]
-        points_best_1 = np.stack(points_best_1, axis=0)
-
-        points_best_2 = [points_new_2[i] for i in best_indices]
-        points_best_2 = np.stack(points_best_2, axis=0)
-
         # CALCULATE DISPLACEMENT ON X AND Y AXIS
-        delta_x = np.median(points_best_2[:, 0] - points_best_1[:, 0])
-        delta_y = np.median(points_best_2[:, 1] - points_best_1[:, 1])
+        delta_x = np.median(points_new_2[:, 0] - points_old_1[:, 0])
+        delta_y = np.median(points_new_2[:, 1] - points_old_1[:, 1])
 
         # CALCULATE CHANGE IN SCALE
         # todo
