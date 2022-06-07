@@ -3,7 +3,7 @@ import numpy as np
 
 PIXELS_BETWEEN_POINTS = 5
 DATA_DIR = "data/"
-FILE_NAME = "skating.mp4"
+FILE_NAME = "walking.mp4"
 ## CHOOSE ONE OF THE FOLLOWING: walking.mp4, cars.mp4, skating.mp4, optimist.mp4, red.mp4, driving.mp4
 
 
